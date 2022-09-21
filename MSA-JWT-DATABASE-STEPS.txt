@@ -1,0 +1,146 @@
+1.
+MSAAPP->create new project->javawithmaven->projectfromarchetype->jakarta8->Msaapp->dockername->finish
+pom.xml->
+<main-complie-sourse>1.8</>
+<version>3.2</>
+goto ExampleService.java ::::
+    @GET
+    //@RolesAllowed("Admin")
+    public String SayHello() {
+        return "Hello, world of MSA Client!";
+    }
+Create ->javaINterface->Name:MSAClient::::::::
+ @RegisterRestClient(configKey = "myclient")
+ @GET
+    public String SayHello();
+OtherSource->src->new folder->META-INF->finish
+then in META-INF->create ->new ->propertiy file->microprofile-config
+myclient/mp-rest/url=http://localhost:8080/MSAApp/rest/example
+
+Newservlet->Name->MSAservlet:::::::
+ @Inject @RestClient MSAClient cl;
+out.println("<h1>Servlet MSAServlet at " + cl.SayHello()+ "</h1>");
+
+2.create project->name ->MSaClient
+
+sp->javainterface->remoteClient
+ @GET
+    public String SayHello();
+osp->src->META_INF->microprofile-config
+
+rclient/mp-rest/url=http://localhost:8080/MSAApp/rest/example
+
+1.MSAPP->exampleServices.java
+ 
+ @Inject DataBean db;
+    @GET
+    @Path("add/{x}/{y}")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String Sum(@PathParam("x") Integer x,@PathParam("y") Integer y)
+    {
+        return new Integer(x.intValue() + y.intValue()).toString();
+    }
+2.create sevlett->Clientservlet
+   @Inject @RestClient RemoteClient rcl;
+
+  out.println("<h1>Servlet ClientServlet at " + rcl.SayHello()+ "</h1>");
+  out.println("<h1>Sum of 10 and 20 is => " + rcl.Sum(20, 30)+ "</h1>");
+
+then run
+
+java -jar payara-micro-5.2022.2.jar --deploy MSAAPP/artifact/MSAAPP.war --port8585
+java -jar payara-micro-5.2022.2.jar --deploy MSAClient/artifact/MSAClient.war --port8585
+
+
+jwt-token json file::::::::::::::::::::::::::
+
+cmd -> java -jar jwtenizr.jar
+then genrate the file in->
+{"iss":"airhacks","jti":"42","sub":"shilpamaniya","upn":"shilpamaniya","groups":["Admin","Supervisor"]}
+run:-> java -jar jwtenizr.jar
+reload all file
+
+MSAApp->ictmsaapp.msaapp.config->BootStrap.java
+@LoginConfig(authMethod = "MP-JWT")
+@DeclareRoles({"Admin","Supervisor"})
+
+MSAAPP->META-INF->microproile.config
+mp.jwt.verify.issuer=airhacks
+mp.jwt.verify.publickey=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj7d2D/buOw/LmPlK1fH0mPk6kjxTiqzZjFG8S/Opm+5bJ/xscJ9/Yg4gBBN58NEq6DpEHHdcyJPEdSgeO9WfiYmx1xNq1Ag7m9sxyN8N/H0YAnwE/0m63JfaGy1Qhk75Cw0KrUKhGAg5rLPSh7Q/nIuQzJZ1VwnL/45VPUV5cUoZlJI9wqC/vTW9xHdggT93FQJOgeap/tEi0j25DO97a8ve8wdEMJ/o+a3g5T45CFXdAk02vG4i7YayK3RtifufF/vSsvppYx3UnKeAHr1ENVlDV/za18v7L4QPhDon4LWt4Sv4sYUYfyU5RioBKhQhgxt0A/8FslnGsuudaMyObwIDAQAB
+
+MSAAPP->example.java
+@GET before @RolesAllowed("Admin")
+
+ClientApp:-----------
+META_INF->Propertilesfile->and token file string
+jwt-String = eyJraWQiOiJqd3Qua2V5IiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJzdWIiOiJkaHJ1dmlrYXRyb2RpeWEiLCJ1cG4iOiJkaHJ1dmlrYXRyb2RpeWEiLCJhdXRoX3RpbWUiOjE2NjM2ODc3OTQsImlzcyI6ImFpcmhhY2tzIiwiZ3JvdXBzIjpbIkFkbWluIiwiU3VwZXJ2aXNvciJdLCJleHAiOjE2NjM2ODg3OTQsImlhdCI6MTY2MzY4Nzc5NCwianRpIjoiNDIifQ.VaH8dyXok0aD_WgE1-LKe9K75Chgcko2NU6pR7d48tbFLiCIi8TtnVlF7f6mcm5WsHxK4uYIQfA9k-ItetMSpwacHmPAKMtpsPl96RqSFJV6zQYMZgu5D6PxaSv94tRYhW65UK17b37M31RGQrHbpRJltihFsDsXXmLKrz7NCTYpPqENMyNlDp96HNzCCjwpdmVE9L7BTY6C0ngBn8FhiTm5RYzbaFlAsIuL9S1RR4To782Ry1Ze9I-qL1m5oV7BUTT7ZhUeSzYQD38nEwHsWfOIW60mIqLVNz6FQ-ZCkuVN5Exgrdt2yvpMA5CK41xbVZ1Vz9oR0qfkhSg29J1G1A
+
+RemoteClient.java:::::::::
+every get after
+    @RolesAllowed("Admin")
+    @ClientHeaderParam(name = "authorization", value = "{generateJWTToken}")
+below public.............
+ default String generateJWTToken()
+    {
+        Config config = ConfigProvider.getConfig();
+//        String token = config.getValue("jwt-String", String.class);
+//        String authtoken = "Bearer " + token;
+        String authtoken = "Bearer "+GenerateToken.generateJWT();
+        return authtoken;
+    }
+    
+
+
+
+
+
+
+
+
+
+//work with Database::::::::::::::::
+
+create database and pool and then ping
+
+MSAApp->Source Package(sp)->Persistence unit->Name->none->finish
+sp->entity from database
+SessionBean->Name(Databeans.java)->stateless
+
+Databenas.java:-
+   @PersistenceContext(unitName = "ictpu")
+    EntityManager em;
+    
+ public Collection<Student> getAllStudents()
+    {
+        return em.createNamedQuery("Student.findAll").getResultList();
+    }
+Exampleservice.java::::::::::::::::::::::
+    @Inject DataBean db;
+    @GET
+    @RolesAllowed("Admin")
+    @Path("getallstudents")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Collection<Student> getAllStudents()
+    {
+        return db.getAllStudents();
+    }
+
+MSAClient :::::::::::::::
+RemoteClient.java:::::
+ @GET
+    @RolesAllowed("Admin")
+    @ClientHeaderParam(name = "authorization", value = "{generateJWTToken}")
+    @Path("getallstudents")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Collection<Student> getAllStudents();
+
+clientservlet:::::::::::::::
+ Collection<Student> students = rcl.getAllStudents();
+            for(Student s : students)
+            {
+                out.println("<h1>Student Name :- " + s.getStudentName() + "</h1>");
+                out.println("<h1>Student Age :- " + s.getAge()+ "</h1>");
+//                out.println("<h1>Student Course :- " + s.getCourse()+ "</h1>");
+            }
+
+
