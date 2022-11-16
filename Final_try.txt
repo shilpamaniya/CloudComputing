@@ -1,0 +1,387 @@
+model products.js===============
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const SchemaProduct = new Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    price: {        
+        type: Number,
+        required: true
+    },
+    quntity: {
+        type: Number,
+        required: true
+    },
+    image: {
+        type: String,
+        required: true
+    },
+  
+});
+module.exports = mongoose.model('Product', SchemaProduct);
+
+controllers/product.js==================
+        
+const Product = require('../Models/product');
+const mongoose = require('mongoose');
+
+module.exports.addProduct = function (req, res) {
+    var product = new Product();
+    product.name = req.body.name;
+    product.description = req.body.description;
+    product.price = req.body.price;
+    product.quntity = req.body.quntity;
+    product.image = req.file.originalname;  
+    
+    product.save(function (err, doc) {
+        if (!err) {
+          
+            res.redirect('/');
+        }
+        else {
+            if (err.name == 'ValidationError') {
+                res.render("addproduct", {
+                    viewTitle: "Insert Product....",
+                    product: req.body
+                });
+            }
+            else
+                console.log('record not inserted....  ' + err);
+        }
+    });
+}
+
+module.exports.showProduct = function (req, res) {
+    Product.find(function (err, docs) {
+            if (!err) {
+                res.render("showproducts", {
+                    products: docs
+                });
+            }
+            else {
+                console.log('record not display....' + err);
+            }
+    });
+}
+
+
+view/addproduct.ejs====================
+<html>
+    <head>
+        <title>insert Product</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+ 
+    </head>
+    <body>
+        <h1> Product</h1>
+        <form action="/addproduct" method="post" enctype="multipart/form-data">
+           
+                <div class="container mt-5">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <table>
+               
+                                <tr>
+                                    <td>Name</td>
+                                    <td><input type="text" name="name"></td>
+                                </tr>
+                                <tr>
+                                    <td>Description</td>
+                                    <td><input type="text" name="description"></td>
+                                </tr>
+                                <tr>
+                                    <td>Price</td>
+                                    <td><input type="number" name="price"></td>
+                                </tr>
+                                <tr>
+                                    <td>Quntity</td>
+                                    <td><input type="number" name="quntity"></td>
+                                </tr>
+                                <tr>
+                                    <td>Image</td>
+                                    <td><input type="file" name="productImage" accept="image/jpeg, image/png"></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td><input type="submit" value="Add Product"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+            </div>
+         </form>
+    </body>
+</html>
+
+view/showproduct.ejs===============
+
+<html>
+<head>
+    <title>Products Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+ 
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Products Data</h1>
+                <table class="table" border="2">
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Quntity</th>
+                        <th>Image</th>
+                    </tr>
+                    <% if(products.length == 0) { %>
+                        <tr>
+                            <td colspan="5">No products found</td>
+                        </tr>
+                    <% } %>
+                    <% for (var i = 0; i < products.length; i++) { %>
+                        <tr>
+                           
+                            <td><%= products[i].name %></td>
+                            <td><%= products[i].description %></td>
+                            <td><%= products[i].price %></td>
+                         
+                            <td><%= products[i].quntity %></td>
+                            <td><img src="<%= products[i].image %>" width="100" height="100"></td>
+                        </tr>
+                    <% } %>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+app.js=============
+const express = require('express');
+const app = express();
+const multer = require('multer');
+//allow only images
+const storage = multer.diskStorage({
+    destination: function(req, file, cb){
+        cb(null,'./uploads/');
+    },
+    filename: function(req, file, cb){
+        cb(null, file.originalname);
+    }
+});
+const fileFilter = (req, file, cb) => {
+    if(file.mimetype === 'image/jpeg' || file.mimetype === 'image/png'){
+        cb(null, true);
+    }else{
+        cb(null, false);
+    }
+};
+const upload = multer({storage: storage, fileFilter: fileFilter});
+const ProductController = require('./Controllers/productscontroller');
+const mongoose = require('mongoose');
+
+//connect to mongodb
+mongoose.connect('mongodb://localhost:27017/Products_details', (err) => {
+    if (!err) {
+        console.log('database connected.');
+    }
+    else {
+        console.log('database not connected : ' + err);
+    }
+});
+
+app.set('view engine', 'ejs');
+
+app.use(express.static('uploads'));
+app.use(express.urlencoded({extended: false}));
+app.use(express.json());
+
+app.get('/', ProductController.showProduct);
+
+app.get('/addproduct', function (req, res) {
+    res.render('addproduct');
+});
+
+app.post('/addproduct', upload.single('productImage'), ProductController.addProduct);
+
+app.listen(3000, function () {
+    console.log('Server started at port 3000');
+});
+
+
+php=================================
+
+connect.php===============
+<?php
+
+$servername="localhost";
+$username="root";
+$password="shilpa1612";
+$dbname="phpexam";
+
+$conn=mysqli_connect($servername,$username,$password,$dbname);
+
+if($conn)
+{
+    echo "data base connected";
+}
+else{
+    die("connection failed".mysqli_connect_errno());
+}
+
+create.php =============
+<?php 
+
+include "connect.php";
+    if (isset($_POST['submit'])) {
+    $first_name = $_POST['firstname'];
+    $last_name = $_POST['lastname'];
+    $password = $_POST['password'];
+    $gender = $_POST['gender'];
+    $sql = "INSERT INTO `users`(`firstname`, `lastname`, `password`, `gender`) VALUES ('$first_name','$last_name','$password','$gender')";
+    $result = $conn->query($sql);
+    if ($result == TRUE) {
+      echo "New record created successfully.";
+    }else{
+      echo "Error:". $sql . "<br>". $conn->error;
+    } 
+    $conn->close(); 
+  }
+
+?>
+
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Signup Form</h2>
+<form action="" method="POST">
+  <fieldset>
+    <legend>Personal information:</legend>
+    First name:<br>
+    <input type="text" name="firstname">
+    <br>
+    Last name:<br>
+    <input type="text" name="lastname">
+    <br>
+    Password:<br>
+    <input type="password" name="password">
+    <br>
+    Gender:<br>
+    <input type="radio" name="gender" value="Male">Male
+    <input type="radio" name="gender" value="Female">Female
+    <br><br>
+    <input type="submit" name="submit" value="submit">
+    <a href="view.php">view details</a>
+  </fieldset>
+</form>
+</body>
+</html>
+delete.php=================
+<?php 
+include "connect.php"; 
+if (isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $sql = "DELETE FROM `users` WHERE `id`='$id'";
+     $result = $conn->query($sql);
+     if ($result == TRUE) {
+        echo "Record deleted successfully.";
+    }else{
+        echo "Error:" . $sql . "<br>" . $conn->error;
+    }
+} 
+?>
+
+login.php================
+<?php
+
+include('connect.php');
+
+$first_name = $_POST['firstname'];
+$password=$_POST['password'];
+
+$sql="select * from users where firstname='$first_name' and password='$password'";
+$result=mysqli_query($conn,$sql);
+$count=mysqli_num_rows($result);
+if($count == 1)
+{
+    echo "login sucrssfull";
+}
+else{
+    echo"login error";
+}
+
+loginindex.html=============
+<form action="login.php" method="POST">
+    <p>  
+                    <label> UserName: </label>  
+                    <input type = "text" id ="firstname" name  = "firstname" />  
+                </p>  
+                <p>  
+                    <label> Password: </label>  
+                    <input type = "password" id ="password" name  = "password" />  
+                </p>  
+                <p>     
+                    <input type =  "submit" id = "btn" value = "Login" />  
+                </p>  
+</form>                             
+
+view.php==========
+
+<?php 
+
+include "connect.php";
+$sql = "SELECT * FROM users";
+$result = $conn->query($sql);
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Page</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+  <h2>users</h2>
+<table class="table">
+    <thead>
+        <tr>
+        <th>ID</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Gender</th>
+        <th>Action</th>
+    </tr>
+</thead>
+    <tbody> 
+        <?php
+            if ($result->num_rows > 0) {
+                while ($row = $result->fetch_assoc()) {
+        ?><tr>
+          <td><?php echo $row['id']; ?></td>
+                    <td><?php echo $row['firstname']; ?></td>
+                    <td><?php echo $row['lastname']; ?></td>
+                    <td><?php echo $row['gender']; ?></td>
+                    <td><a class="btn btn-info" href="update.php?id=<?php echo $row['id']; ?>">Edit</a>&nbsp;<a class="btn btn-danger" href="deletc.php?id=<?php echo $row['id']; ?>">Delete</a></td>
+                    </tr>                       
+                     <?php       }
+
+            }
+
+        ?>                
+    </tbody>
+</table>
+    </div> 
+</body>
+</html>
+
+
+
+
+
