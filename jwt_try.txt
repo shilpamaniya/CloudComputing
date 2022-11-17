@@ -1,0 +1,307 @@
+usercontroller.js=====
+const User = require('../models/user');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+module.exports.login_page = (req, res) => {
+    //render login page
+    res.render('login');
+};
+
+module.exports.register_page = (req, res) => {
+    res.render('register');
+};
+
+module.exports.user_login = (req, res) => {
+    User.findOne({ email: req.body.email }, (err, user) => {
+        if (err) throw err;
+        if (!user) {
+            res.json({ success: false, message: 'User not found' });
+        } else if (user) {
+            let validPassword = bcrypt.compare(req.body.password, user.password, (err, isMatch) => {
+                if (err) throw err;
+                if (isMatch) {
+                    let token = jwt.sign({ userId: user._id }, config.secret, { expiresIn: '24h' });
+                    //saving token to the cookie for the user and redirecting to student page
+                    res.cookie('token', token, { maxAge: 900000, httpOnly: true });
+                    //redirect to student HTML page
+                    res.redirect('/student.html');
+                    //res.json({ success: true, message: 'Success!', token: token, user: { email: user.email } });
+                } else {
+                    res.json({ success: false, message: 'Invalid password' });
+                }
+            });
+        }
+    });
+};
+
+module.exports.user_logout = (req, res) => {
+    res.clearCookie('token');
+    res.redirect('/');
+};
+
+module.exports.user_register = (req, res) => {
+    let user = new User({
+        name: req.body.name,
+        email: req.body.email,
+        //hash the password
+        password: bcrypt.hashSync(req.body.password, 10)
+    });
+    user.save((err) => {
+        if (err) {
+            res.json({ success: false, message: 'Could not save user. Error: ', err });
+        } else {
+            res.redirect('/');
+        }
+    });
+};
+
+view/register.html
+<!-- new user registration form -->
+<html>
+<head>
+    <title>Register</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <br><br>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 col-md-offset-4">
+                <div class="login-panel panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Please Register</h3>
+                    </div>
+                    <div class="panel-body">
+                        <form role="form" action="/register" method="post">
+                            <fieldset>
+                                <div class="form-group">
+                                    <input class="form-control" placeholder="Name" name="name" type="text" autofocus required="">
+                                </div>
+                                <div class="form-group">
+                                    <input class="form-control" placeholder="E-mail" name="email" type="email" autofocus required="">
+                                </div>
+                                <div class="form-group">
+                                    <input class="form-control" placeholder="Password" name="password" type="password" value="" required="">
+                                </div>
+                                <!-- Change this to a button or input when using this as a form -->
+                                <input type="submit" class="btn btn-lg btn-success btn-block" value="Register">
+                                <!-- new user registration -->
+                                <a href="/login" class="btn btn-lg btn-primary btn-block">Login</a>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+model/user.js===
+//user mongoose schema
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+// User Schema
+const UserSchema = mongoose.Schema({
+    name: {
+        type: String
+    },
+    email: {
+        type: String,
+        required: true
+    },
+    password: {
+        type: String,
+        required: true
+    }
+});
+
+module.exports = mongoose.model('User', UserSchema);
+studentcontroller.js============
+const Student = require('../models/student');
+
+module.exports.get_all_students = (req, res) => {
+    Student.find({}, (err, students) => {
+        if (err) {
+            res.json({ success: false, message: err });
+        } else {
+            if (!students) {
+                res.json({ success: false, message: 'No students found' });
+            } else {
+                res.json({ success: true, students: students });
+            }
+        }
+    });
+};
+module.exports.add_student = (req, res) => {
+    let student = new Student({
+        name: req.body.name,
+        email: req.body.email,
+        class: req.body.class,
+        semester: req.body.semester
+    });
+    student.save((err) => {
+        if (err) {
+            res.json({ success: false, message: 'Could not save student. Error: ', err });
+        } else {
+            res.json({ success: true, message: 'Student saved!' });
+        }
+    });
+};
+
+module.exports.update_student_page = (req, res) => {
+    Student.findOne({ _id: req.params.id }, (err, student) => {
+        if (err) {
+            res.json({ success: false, message: err });
+        } else {
+            if (!student) {
+                res.json({ success: false, message: 'No student found' });
+            } else {
+                res.render('updatestudent', { student: student });
+            }
+        }
+    });
+};
+module.exports.delete_student_page = (req, res) => {
+    Student.findOne({ _id: req.params.id }, (err, student) => {
+        if (err) {
+            res.json({ success: false, message: err });
+        } else {
+            if (!student) {
+                res.json({ success: false, message: 'No student found' });
+            } else {
+                res.render('deletestudent', { student: student });
+            }
+        }
+    });
+};
+
+view/addstudent.html
+<!-- Form to add new student -->
+<html>
+<head>
+    <title>Add Student</title>
+    
+    <script>
+        $(document).ready(function(){
+            $("#addstudent").submit(function(event){
+                event.preventDefault();
+                var student = {
+                    name: $("#name").val(),
+                    email: $("#email").val(),
+                    class: $("#class").val(),
+                    semester: $("#semester").val()
+                }
+                $.ajax({
+                    url: "/students",
+                    type: "POST",
+                    data: student,
+                    success: function(result){
+                        window.location.href = "/student.html";
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <br><br>
+    <div class="container">
+        <div class="row">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title" style="text-align: center;">Add Student</h3>
+                </div>
+                <div class="panel-body">
+                    <form id="addstudent">
+                        <div class="form-group">
+                            <label for="name">Name:</label>
+                            <input type="text" class="form-control" id="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email:</label>
+                            <input type="email" class="form-control" id="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="class">Class:</label>
+                            <input type="text" class="form-control" id="class">
+                        </div>
+                        <div class="form-group">
+                            <label for="semester">Semester:</label>
+                            <input type="text" class="form-control" id="semester">
+                        </div>
+                        <button type="submit" class="btn btn-default">Add</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+app.js----------------
+const express = require('express');
+const app = express();
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const Usercontroller = require('./Controllers/Usercontroller');
+const Studentcontroller = require('./Controllers/Studentcontroller');
+const cookieParser = require('cookie-parser');
+const config = require('./config');
+const port = process.env.PORT || 3000;
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors());
+app.use(express.static('views'));
+
+mongoose.connect(config.database, { useNewUrlParser: true }, (err) => {
+    if (err) {
+        console.log(err);
+    } else {
+        console.log('Connected to the database');
+    }
+});
+
+//Users
+//app.get('/', Usercontroller.login_page);
+app.post('/login', Usercontroller.user_login);
+app.get('/logout', Usercontroller.user_logout);
+//app.get('/register', Usercontroller.register_page);
+app.post('/register', Usercontroller.user_register);
+
+//allow CRUD operations on students only if the user is logged in
+app.use((req, res, next) => {
+    let token = req.cookies.token;
+    if (token) {
+        jwt.verify(token, config.secret, (err, decoded) => {
+            if (err) {
+                res.json({ success: false, message: 'Token is not valid' });
+            } else {
+                req.decoded = decoded;
+                next();
+            }
+        });
+    } else {
+        res.json({ success: false, message: 'Auth token is not supplied' });
+    }
+});
+
+//Students
+app.get('/students', Studentcontroller.get_all_students);
+app.get('/students/:id', Studentcontroller.get_student_details);
+//app.get('/addstudent', Studentcontroller.add_student_page);
+app.post('/students', Studentcontroller.add_student);
+//app.get('/updatestudent/:id', Studentcontroller.update_student_page);
+app.put('/students/:id', Studentcontroller.update_student);
+//app.get('/deletestudent/:id', Studentcontroller.delete_student_page);
+app.delete('/students/:id', Studentcontroller.delete_student);
+
+app.listen(port, () => {
+    console.log('Server started on port ' + port);
+});
