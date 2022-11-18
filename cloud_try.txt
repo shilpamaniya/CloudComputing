@@ -1,0 +1,102 @@
+app1:
+3.2   1.8 driver driverClass
+exampleService.java==============>
+@GET
+    public String SayHello()
+    {
+        return "hello msa appp........";
+    }
+sp->javaIterface->MSaClient.java
+@RegisterRestClient(configKey = "myclient")
+
+  @GET
+    public String SayHello();
+sp->servlet->MsaServlet
+ @Inject @RestClient MSaClient cl;
+ out.println("<h1> MsaServlet  " + cl.SayHello() + "</h1>");
+
+osp->src/main->folder->META-INF->propertiesfile->microprofile-config
+myclient/mp-rest/url=http://localhost:8080/Try_MsaAppp/rest/example
+
+app2=>same process=========>
+
+sp->servlet->ClientServlet
+sp->interface-->RemoteClient
+osp->src/main->folder->META-INF->propertiesfile->microprofile-config
+rclient/mp-rest/url=http://localhost:8080/Try_MsaAppp/rest/example
+
+jwt==========>
+
+cmd --->  java -jar jwtenizr.jar
+jwt-token-->"sub":"shilpamaniya","upn":"shilpamaniya","groups":["Admin","Supervisor"]
+sp-->Boostrap.java
+@LoginConfig(authMethod = "MP-JWT")
+@DeclareRoles({"Admin","Supervisor"})
+app1-->META->Propertiesfile--->copy microprofile-config file
+app1-->exampleService.java
+ @RolesAllowed("Admin")
+ @GET
+
+app2--->META->Propertiesfile in
+jwt-String=  paste token file
+sp->remoteclient->
+ @GET
+     @RolesAllowed("Admin")
+     @ClientHeaderParam(name = "authorization" ,value ="(generateJWTToken)")
+     
+     public String SayHello();
+     default String generateJWTToken()
+     {
+        
+         Config config = ConfigProvider.getConfig();
+         String token=config.getValue("jwt-srting",String.class);
+         
+         String authtoken = "Bearer "+token;         
+         return authtoken;
+     }
+
+database========>
+app1-->sp->persistencs unit -> entity class from database
+sp->sessionbean->databean->stateless
+@PersistenceContext(unitName = "ictpu")
+       EntityManager em;
+       public Collection<State>getAllStates()
+       {
+           return em.createNamedQuery("State.findAll").getResultList();
+       }
+ExampleService.java-->
+  @Inject DataBean db;
+    @GET
+    @RolesAllowed("Admin")
+    @Path("getAllStates")
+    @Produces(MediaType.APPLICATION_JSON)
+
+    public Collection<State>getAllStates()
+    {
+        return db.getAllStates();
+    }
+
+copy Entity folder qpp1 se aap3 sp--->
+app2->remoteclient--->
+@GET
+    @Path("getAllStates")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed("Admin")
+    @ClientHeaderParam(name = "authorization",value = "{generateJWTToken}")
+public Collection<State>getAllStates();
+
+clientServlet---->
+Collection<State> state= rcl.getAllStates();
+            for(State sm : department)
+            {
+                out.println("<h3>Department Name :"+ sm.getSateName() +"</h3>");
+            }
+docker image ls
+docker pull alpine:latest
+docker image la alp*
+docker run -dit --name a1 alpine:latest
+docker exec -it a1/bin/ash
+
+
+
+
