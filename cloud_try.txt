@@ -96,6 +96,8 @@ docker pull alpine:latest
 docker image la alp*
 docker run -dit --name a1 alpine:latest
 docker exec -it a1/bin/ash
+java-jar payara-micro-5.2022.2.jar --deploy
+
 
 
 
