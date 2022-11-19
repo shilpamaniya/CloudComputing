@@ -54,7 +54,7 @@ sp->remoteclient->
          String authtoken = "Bearer "+token;         
          return authtoken;
      }
-
+import org.eclipse.microprofile.config.ConfigProvider;
 database========>
 app1-->sp->persistencs unit -> entity class from database
 sp->sessionbean->databean->stateless
